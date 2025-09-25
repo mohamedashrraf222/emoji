@@ -36,13 +36,22 @@ def get_emoji_by_name(name: str, language: str) -> Optional[str]:
     fully_qualified = STATUS['fully_qualified']
 
     if language == 'alias':
+        # Eager binding of local variables and methods
+        get_alias = dict.get
         for emj, data in EMOJI_DATA.items():
-            if name in data.get('alias', []) and data['status'] <= fully_qualified:
-                return emj
+            aliases = get_alias(data, 'alias', [])
+            # Use set for O(1) lookup if aliases is long (benefits most real data)
+            if len(aliases) > 4:
+                if name in set(aliases) and data['status'] <= fully_qualified:
+                    return emj
+            else:
+                if name in aliases and data['status'] <= fully_qualified:
+                    return emj
         language = 'en'
 
+    get_language = dict.get
     for emj, data in EMOJI_DATA.items():
-        if data.get(language) == name and data['status'] <= fully_qualified:
+        if get_language(data, language) == name and data['status'] <= fully_qualified:
             return emj
 
     return None
