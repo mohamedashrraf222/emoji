@@ -78,7 +78,9 @@ EMOJI_DATA: Dict[str, Dict[str, Any]]
 
 def _open_file(name: str) -> IO[bytes]:
     if sys.version_info >= (3, 9):
-        return importlib.resources.files('emoji.unicode_codes').joinpath(name).open('rb')
+        if not hasattr(_open_file, "_files_traversable"):
+            _open_file._files_traversable = importlib.resources.files('emoji.unicode_codes')
+        return _open_file._files_traversable.joinpath(name).open('rb')
     else:
         return importlib.resources.open_binary('emoji.unicode_codes', name)
 
