@@ -37,7 +37,8 @@ def get_emoji_by_name(name: str, language: str) -> Optional[str]:
 
     if language == 'alias':
         for emj, data in EMOJI_DATA.items():
-            if name in data.get('alias', []) and data['status'] <= fully_qualified:
+            aliases = data.get('alias')
+            if aliases and name in aliases and data['status'] <= fully_qualified:
                 return emj
         language = 'en'
 
