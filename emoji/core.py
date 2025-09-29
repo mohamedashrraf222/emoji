@@ -20,6 +20,8 @@ from emoji.tokenizer import (
     filter_tokens,
 )
 
+_EMOJI_SET = set(unicode_codes.EMOJI_DATA)
+
 __all__ = [
     'emojize',
     'demojize',
@@ -390,7 +392,7 @@ def is_emoji(string: str) -> bool:
     Returns True if the string is a single emoji, and it is "recommended for
     general interchange" by Unicode.org.
     """
-    return string in unicode_codes.EMOJI_DATA
+    return string in _EMOJI_SET
 
 
 def purely_emoji(string: str) -> bool:
