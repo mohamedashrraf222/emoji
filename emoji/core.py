@@ -263,7 +263,7 @@ def demojize(
         :data:`EMOJI_DATA` and must return a replacement string  to be used.
         The passed data is in the form of::
 
-            handle_version('\\U0001F6EB', {
+            handle_version('\U0001F6EB', {
                 'en' : ':airplane_departure:',
                 'status' : fully_qualified,
                 'E' : 1,
@@ -283,30 +283,32 @@ def demojize(
 
     unicode_codes.load_from_json(language)
 
+    l_delim, r_delim = delimiters
+
     def handle(emoji_match: EmojiMatch) -> str:
         assert emoji_match.data is not None
-        if version is not None and emoji_match.data['E'] > version:
+        emj_data = emoji_match.data
+        if version is not None and emj_data['E'] > version:
             if callable(handle_version):
                 return handle_version(emoji_match.emoji, emoji_match.data_copy())
             elif handle_version is not None:
                 return handle_version
             else:
                 return ''
-        elif language in emoji_match.data:
-            if _use_aliases and 'alias' in emoji_match.data:
-                return (
-                    delimiters[0] + emoji_match.data['alias'][0][1:-1] + delimiters[1]
-                )
+        elif language in emj_data:
+            if _use_aliases and 'alias' in emj_data:
+                alias_name = emj_data['alias'][0][1:-1]
+                return l_delim + alias_name + r_delim
             else:
-                return delimiters[0] + emoji_match.data[language][1:-1] + delimiters[1]
+                lang_name = emj_data[language][1:-1]
+                return l_delim + lang_name + r_delim
         else:
             # The emoji exists, but it is not translated, so we keep the emoji
             return emoji_match.emoji
 
-    matches = tokenize(string, keep_zwj=config.demojize_keep_zwj)
     return ''.join(
         str(handle(token.value)) if isinstance(token.value, EmojiMatch) else token.value
-        for token in matches
+        for token in tokenize(string, keep_zwj=config.demojize_keep_zwj)
     )
 
 

@@ -102,8 +102,10 @@ def load_from_json(key: str):
         raise NotImplementedError('Language not supported', key)
 
     with _open_file(f'emoji_{key}.json') as f:
-        for emj, value in json.load(f).items():
-            EMOJI_DATA[emj][key] = value  # type: ignore
+        loaded = json.load(f)
+        for emj, value in loaded.items():
+            emj_dict = EMOJI_DATA.setdefault(emj, {})
+            emj_dict[key] = value  # type: ignore
 
     _loaded_keys.add(key)
 
