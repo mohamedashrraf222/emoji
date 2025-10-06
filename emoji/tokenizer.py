@@ -11,15 +11,15 @@ from emoji import unicode_codes
 
 
 __all__ = [
-    'EmojiMatch',
-    'EmojiMatchZWJ',
-    'EmojiMatchZWJNonRGI',
-    'Token',
-    'tokenize',
-    'filter_tokens',
+    "EmojiMatch",
+    "EmojiMatchZWJ",
+    "EmojiMatchZWJNonRGI",
+    "Token",
+    "tokenize",
+    "filter_tokens",
 ]
 
-_ZWJ = '\u200d'
+_ZWJ = "\u200d"
 _SEARCH_TREE: Dict[str, Any] = {}
 
 
@@ -29,7 +29,7 @@ class EmojiMatch:
     emoji in a string.
     """
 
-    __slots__ = ('emoji', 'start', 'end', 'data')
+    __slots__ = ("emoji", "start", "end", "data")
 
     def __init__(
         self, emoji: str, start: int, end: int, data: Union[Dict[str, Any], None]
@@ -53,11 +53,11 @@ class EmojiMatch:
         """
         if self.data:
             emj_data = self.data.copy()
-            emj_data['match_start'] = self.start
-            emj_data['match_end'] = self.end
+            emj_data["match_start"] = self.start
+            emj_data["match_end"] = self.end
             return emj_data
         else:
-            return {'match_start': self.start, 'match_end': self.end}
+            return {"match_start": self.start, "match_end": self.end}
 
     def is_zwj(self) -> bool:
         """
@@ -68,7 +68,7 @@ class EmojiMatch:
 
         return _ZWJ in self.emoji
 
-    def split(self) -> Union['EmojiMatchZWJ', 'EmojiMatch']:
+    def split(self) -> Union["EmojiMatchZWJ", "EmojiMatch"]:
         """
         Splits a ZWJ-emoji into its constituents.
 
@@ -81,7 +81,7 @@ class EmojiMatch:
             return self
 
     def __repr__(self) -> str:
-        return f'{self.__class__.__name__}({self.emoji}, {self.start}:{self.end})'
+        return f"{self.__class__.__name__}({self.emoji}, {self.start}:{self.end})"
 
 
 class EmojiMatchZWJ(EmojiMatch):
@@ -89,7 +89,7 @@ class EmojiMatchZWJ(EmojiMatch):
     Represents a match of multiple emoji in a string that were joined by
     zero-width-joiners (ZWJ/``\\u200D``)."""
 
-    __slots__ = ('emojis',)
+    __slots__ = ("emojis",)
 
     def __init__(self, match: EmojiMatch):
         super().__init__(match.emoji, match.start, match.end, match.data)
@@ -113,11 +113,11 @@ class EmojiMatchZWJ(EmojiMatch):
     def is_zwj(self) -> bool:
         return True
 
-    def split(self) -> 'EmojiMatchZWJ':
+    def split(self) -> "EmojiMatchZWJ":
         return self
 
     def __repr__(self) -> str:
-        return f'{self.__class__.__name__}({self.join()}, {self.start}:{self.end})'
+        return f"{self.__class__.__name__}({self.join()}, {self.start}:{self.end})"
 
 
 class EmojiMatchZWJNonRGI(EmojiMatchZWJ):
@@ -161,20 +161,16 @@ def tokenize(string: str, keep_zwj: bool) -> Iterator[Token]:
     tuple :class:`Token` ``(char, char)`` and all emoji as :class:`Token` ``(chars, EmojiMatch)``.
 
     :param string: String contains unicode characters. MUST BE UNICODE.
-    :param keep_zwj: Should ZWJ-characters (``\\u200D``) that join non-RGI emoji be
+    :param keep_zwj: Should ZWJ-characters (``\u200d``) that join non-RGI emoji be
         skipped or should be yielded as normal characters
     :return: An iterable of tuples :class:`Token` ``(char, char)`` or :class:`Token` ``(chars, EmojiMatch)``
     """
-
     tree = get_search_tree()
     EMOJI_DATA = unicode_codes.EMOJI_DATA
-    # result: [ Token(oldsubstring0, EmojiMatch), Token(char1, char1), ... ]
     result: List[Token] = []
     i = 0
     length = len(string)
-    ignore: List[
-        int
-    ] = []  # index of chars in string that are skipped, i.e. the ZWJ-char in non-RGI-ZWJ-sequences
+    ignore = set()  # Using a set for O(1) membership test
     while i < length:
         consumed = False
         char = string[i]
@@ -192,15 +188,10 @@ def tokenize(string: str, keep_zwj: bool) -> Iterator[Token]:
                     break
                 sub_tree = sub_tree[string[j]]
                 j += 1
-            if 'data' in sub_tree:
-                emj_data = sub_tree['data']
+            if "data" in sub_tree:
+                emj_data = sub_tree["data"]
                 code_points = string[i:j]
-
-                # We cannot yield the result here, we need to defer
-                # the call until we are sure that the emoji is finished
-                # i.e. we're not inside an ongoing ZWJ-sequence
                 match_obj = EmojiMatch(code_points, i, j, emj_data)
-
                 i = j - 1
                 consumed = True
                 result.append(Token(code_points, match_obj))
@@ -212,15 +203,14 @@ def tokenize(string: str, keep_zwj: bool) -> Iterator[Token]:
             and i > 0
             and string[i - 1] in tree
         ):
-            # the current char is ZWJ and the last match was an emoji
-            ignore.append(i)
+            ignore.add(i)
             if (
-                EMOJI_DATA[result[-1].chars]['status']
-                == unicode_codes.STATUS['component']
+                EMOJI_DATA[result[-1].chars]["status"]
+                == unicode_codes.STATUS["component"]
             ):
-                # last match was a component, it could be ZWJ+EMOJI+COMPONENT
-                # or ZWJ+COMPONENT
-                i = i - sum(len(t.chars) for t in result[-2:])
+                # last match was a component, it could be ZWJ+EMOJI+COMPONENT or ZWJ+COMPONENT
+                total_len = sum(len(t.chars) for t in result[-2:])
+                i = i - total_len
                 if string[i] == _ZWJ:
                     # It's ZWJ+COMPONENT, move one back
                     i += 1
@@ -229,21 +219,22 @@ def tokenize(string: str, keep_zwj: bool) -> Iterator[Token]:
                     # It's ZWJ+EMOJI+COMPONENT, move two back
                     del result[-2:]
             else:
-                # last match result[-1] was a normal emoji, move cursor
-                # before the emoji
+                # last match result[-1] was a normal emoji, move cursor before the emoji
                 i = i - len(result[-1].chars)
                 del result[-1]
             continue
 
         elif result:
-            yield from result
-            result = []
+            for tok in result:
+                yield tok
+            result.clear()
 
-        if not consumed and char != '\ufe0e' and char != '\ufe0f':
+        if not consumed and char != "\ufe0e" and char != "\ufe0f":
             result.append(Token(char, char))
         i += 1
 
-    yield from result
+    for tok in result:
+        yield tok
 
 
 def filter_tokens(
@@ -372,5 +363,5 @@ def get_search_tree() -> Dict[str, Any]:
                     sub_tree[char] = {}
                 sub_tree = sub_tree[char]
                 if i == lastidx:
-                    sub_tree['data'] = unicode_codes.EMOJI_DATA[emj]
+                    sub_tree["data"] = unicode_codes.EMOJI_DATA[emj]
     return _SEARCH_TREE
